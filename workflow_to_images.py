@@ -30,7 +30,7 @@ if __name__ == '__main__':
             spec_string = get_tool_requirements(tool_name, tool_owner, revision)
             if spec_string is not None:
                 image_path = image_store_path / image_name
-                if args.force or not image_name.exists():
+                if args.force or not image_path.exists():
                     build_cmd = ['mulled-build', 'build-and-test', '--test', 'echo', '--singularity', '--singularity-image-dir', str(image_path)] + spec_string
                     subprocess.run(build_cmd, check=True)
 
