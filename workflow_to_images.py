@@ -16,7 +16,7 @@ if __name__ == '__main__':
     parser.add_argument('image_dir')
     args = parser.parse_args()
 
-    image_store_path = Path(args.image_name)
+    image_store_path = Path(args.image_dir)
     if not image_store_path.exists():
         image_store_path.mkdir(mode=0o0755)
     
