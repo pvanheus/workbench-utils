@@ -3,6 +3,7 @@
 import argparse
 import json
 import subprocess
+import sys
 from typing import Union
 
 from bioblend import toolshed
@@ -37,6 +38,7 @@ def get_tool_targets(
     tool_name: str,
     tool_author: str,
     tool_revision: str,
+    tool_id: str,
     toolshed_name: str = "toolshed.g2.bx.psu.edu",
 ) -> Union[list[Target], None]:
     "Given a tool description, get the list of requirements"
@@ -47,11 +49,21 @@ def get_tool_targets(
         tool_name, tool_author, tool_revision
     )
 
+    revisions_seen = set()
     for dictionary in result:
+        if "downloadable" not in dictionary or not dictionary["downloadable"]:
+            continue
+        revision = dictionary["changeset_revision"]
         if "valid_tools" in dictionary:
+            if revision in revisions_seen:
+                continue
             tool_targets = []
+            valid_tools_seen = 0
             # this dict contains a list of installable tools
             for tool in dictionary["valid_tools"]:
+                if tool["id"] != tool_id:
+                    continue
+                valid_tools_seen += 1
                 for requirement in tool["requirements"]:
                     if "version" in requirement:
                         tool_target = build_target(
@@ -60,6 +72,15 @@ def get_tool_targets(
                     else:
                         tool_target = build_target(requirement["name"])
                     tool_targets.append(tool_target)
+            if valid_tools_seen != 1:
+                print(
+                    "Warning: more than one matching tool for",
+                    tool_name,
+                    tool_id,
+                    tool_author,
+                    tool_revision,
+                    file=sys.stderr,
+                )
             if len(tool_targets) == 1:
                 # single package target, we need to find the conda build details
                 tool_targets = [find_conda_package(tool_targets[0])]
@@ -70,9 +91,13 @@ def get_image_name(
     tool_name: str,
     tool_author: str,
     tool_revision: str,
+    tool_id: str,
+    tool_shed: str,
     mulled_version: str = "v2",
 ) -> Union[str, None]:
-    targets = get_tool_targets(tool_name, tool_author, tool_revision)
+    targets = get_tool_targets(
+        tool_name, tool_author, tool_revision, tool_id, tool_shed
+    )
     if targets is not None:
         if mulled_version == "v2":
             image_name = v2_image_name
